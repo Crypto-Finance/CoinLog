@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils/utils';
 import { Loader2 } from 'lucide-react';
 
 interface LoadingStateProps {
@@ -19,8 +19,8 @@ export function LoadingState({
         fullScreen && 'min-h-screen',
       )}
     >
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">{message}</p>
+      <Loader2 className="h-6 w-6 animate-spin text-[#BFFF00]" />
+      <p className="text-sm text-[#c3caac] font-medium">{message}</p>
     </div>
   );
 }
