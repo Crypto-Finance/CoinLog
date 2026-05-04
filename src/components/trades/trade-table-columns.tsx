@@ -1,8 +1,9 @@
 import { ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import type { Column, ColumnDef } from '@tanstack/react-table';
-import type { Trade } from '@/lib/types';
-import { formatPnL, formatDate, pnlColor, cn, formatPrice } from '@/lib/utils';
+import type { Trade } from '@/lib/domain/types';
+import { formatPnL, formatDate, cn, formatPrice } from '@/lib/utils/utils';
+import { pnlColor } from '@/lib/ui/pnl-styles';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DirectionBadge } from './direction-badge';
@@ -14,6 +15,7 @@ function createSortableHeader(label: string) {
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="font-bold text-[#d7e3fb] hover:bg-[#1f2a3c] hover:text-[#BFFF00]"
       >
         {label} <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
@@ -26,78 +28,87 @@ export const columns: ColumnDef<Trade>[] = [
     accessorKey: 'id',
     header: 'ID',
     cell: ({ row }) => (
-      <span className="text-muted-foreground">#{row.getValue('id')}</span>
+      <span className="text-[#c3caac] font-medium">#{row.getValue('id')}</span>
     ),
   },
   {
     accessorKey: 'openTime',
     header: createSortableHeader('Date'),
-    cell: ({ row }) => formatDate(row.getValue('openTime') as string),
+    cell: ({ row }) => (
+      <span className="font-medium text-[#d7e3fb]">{formatDate(row.original.openTime)}</span>
+    ),
   },
   {
     accessorKey: 'symbol',
     header: 'Symbol',
     cell: ({ row }) => (
-      <span className="font-medium">{row.getValue('symbol')}</span>
+      <span className="font-bold text-[#d7e3fb]">{row.getValue('symbol')}</span>
     ),
   },
   {
     accessorKey: 'direction',
     header: 'Side',
     cell: ({ row }) => {
-      const dir = row.getValue('direction') as string;
-      return <DirectionBadge direction={dir as 'Long' | 'Short'} />;
+      return <DirectionBadge direction={row.original.direction} />;
     },
   },
   {
     accessorKey: 'entryPrice',
     header: 'Entry',
-    cell: ({ row }) => formatPrice(row.getValue('entryPrice')),
+    cell: ({ row }) => (
+      <span className="font-medium text-[#d7e3fb]">{formatPrice(row.getValue('entryPrice'))}</span>
+    ),
   },
   {
     accessorKey: 'exitPrice',
     header: 'Exit',
-    cell: ({ row }) => formatPrice(row.getValue('exitPrice')),
+    cell: ({ row }) => (
+      <span className="font-medium text-[#d7e3fb]">{formatPrice(row.getValue('exitPrice'))}</span>
+    ),
   },
   {
     accessorKey: 'pnl',
     header: createSortableHeader('P&L'),
-    cell: ({ row }) => (
-      <span
-        className={cn(
-          'font-semibold',
-          pnlColor(row.getValue('pnl') as string),
-        )}
-      >
-        {formatPnL(row.getValue('pnl') as string)}
-      </span>
-    ),
+    cell: ({ row }) => {
+      return (
+        <span
+          className={cn(
+            'font-[800]',
+            pnlColor(row.original.pnl),
+          )}
+        >
+          {formatPnL(row.original.pnl)}
+        </span>
+      );
+    },
   },
   {
     accessorKey: 'rrActual',
     header: 'R:R',
     cell: ({ row }) => {
-      const rr = row.getValue('rrActual') as string;
-      return <span>{rr ? `${rr}R` : '—'}</span>;
+      const rrActual = row.original.rrActual;
+      return (
+        <span className="font-medium text-[#d7e3fb]">
+          {rrActual ? `${rrActual}R` : '—'}
+        </span>
+      );
     },
   },
   {
     accessorKey: 'setupType',
     header: 'Setup',
     cell: ({ row }) => {
-      const setup = row.getValue('setupType') as string;
-      return <span>{setup || '—'}</span>;
+      return <span className="font-medium text-[#d7e3fb]">{row.original.setupType || '—'}</span>;
     },
   },
   {
     accessorKey: 'isAnnotated',
     header: 'Status',
     cell: ({ row }) => {
-      const annotated = row.getValue('isAnnotated') as boolean;
-      return annotated ? (
+      return row.original.isAnnotated ? (
         <AnnotatedBadge />
       ) : (
-        <Badge variant="outline" className="text-muted-foreground">
+        <Badge variant="outline" className="text-[#c3caac] rounded-full border-[rgba(255,255,255,0.2)]">
           Pending
         </Badge>
       );
@@ -107,7 +118,7 @@ export const columns: ColumnDef<Trade>[] = [
     id: 'actions',
     cell: ({ row }) => (
       <Link href={`/trades/${row.original.id}`}>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" className="text-[#d7e3fb] hover:text-[#BFFF00] hover:bg-[#1f2a3c]">
           View
         </Button>
       </Link>
