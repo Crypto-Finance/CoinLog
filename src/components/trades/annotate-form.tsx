@@ -1,42 +1,19 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, Control } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useTrade, useTrades } from '@/hooks/useTrades';
+import { useAnnotateForm } from '@/hooks/use-annotate-form';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
-import { toast } from 'sonner';
-import type { Trade } from '@/lib/types';
+import { cn } from '@/lib/utils/utils';
 
-import { SETUP_TYPES, EXIT_TYPES, MARKET_CONDITIONS } from '@/lib/field-options';
-import { annotateSchema, type AnnotateFormData } from '@/lib/annotate-schema';
+import { SETUP_TYPES, EXIT_TYPES, MARKET_CONDITIONS } from '@/lib/ui/field-options';
+import type { AnnotateFormData } from '@/lib/domain/annotate-schema';
 import { FormSelect } from '@/components/form/form-select';
 import { FormInput } from '@/components/form/form-input';
-
-/**
- * Map a Trade object to AnnotateFormData.
- */
-function tradeToAnnotateForm(trade: Trade): AnnotateFormData {
-  const isCustomSetup = trade.setupType && !SETUP_TYPES.slice(0, -1).includes(trade.setupType);
-  return {
-    setupType: isCustomSetup ? 'Other' : (trade.setupType || undefined),
-    setupTypeCustom: isCustomSetup ? trade.setupType : '',
-    exitType: trade.exitType || undefined,
-    marketCondition: trade.marketCondition || undefined,
-    stopLoss: trade.stopLoss || '',
-    takeProfit: trade.takeProfit || '',
-    notes: trade.notes || undefined,
-    riskAmount: trade.riskAmount || '',
-    rrPlanned: trade.rrPlanned || '',
-    rrActual: trade.rrActual || '',
-  };
-}
+import { Control } from 'react-hook-form';
 
 interface AnnotationSelectFieldsProps {
   control: Control<AnnotateFormData>;
@@ -142,97 +119,31 @@ interface AnnotateFormProps {
 }
 
 export function AnnotateForm({ tradeId }: AnnotateFormProps) {
-  const router = useRouter();
-  const { trade, loading: tradeLoading } = useTrade(tradeId);
-  const { updateTrade } = useTrades();
-
-  const form = useForm<AnnotateFormData>({
-    resolver: zodResolver(annotateSchema),
-    defaultValues: {
-      setupType: undefined,
-      setupTypeCustom: '',
-      exitType: undefined,
-      marketCondition: undefined,
-      stopLoss: '',
-      takeProfit: '',
-      notes: undefined,
-      riskAmount: '',
-      rrPlanned: '',
-      rrActual: '',
-    },
-  });
-
-  const [showCustomSetup, setShowCustomSetup] = useState(
-    form.getValues('setupType') === 'Other'
-  );
-
-  // Watch for setupType changes to show/hide custom input
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'setupType') {
-        setShowCustomSetup(value.setupType === 'Other');
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  // Update form when trade data loads
-  useEffect(() => {
-    if (trade) {
-      form.reset(tradeToAnnotateForm(trade));
-    }
-  }, [trade, form]);
-
-  async function onSubmit(values: AnnotateFormData) {
-    try {
-      await updateTrade(tradeId, {
-        setupType: values.setupType === 'Other' && values.setupTypeCustom 
-          ? values.setupTypeCustom 
-          : values.setupType,
-        exitType: values.exitType,
-        marketCondition: values.marketCondition,
-        stopLoss: values.stopLoss,
-        takeProfit: values.takeProfit,
-        notes: values.notes,
-        riskAmount: values.riskAmount,
-        rrPlanned: values.rrPlanned,
-        rrActual: values.rrActual,
-        isAnnotated: true,
-      });
-      toast.success('Trade annotated successfully');
-      router.push(`/trades/${tradeId}`);
-    } catch {
-      toast.error('Failed to save annotation');
-    }
-  }
-
-  if (tradeLoading) {
-    return <p className="text-muted-foreground">Loading trade...</p>;
-  }
+  const { form, showCustomSetup, onSubmit, trade } = useAnnotateForm(tradeId);
 
   if (!trade) {
-    return <p className="text-muted-foreground">Trade not found</p>;
+    return <p className="text-[#c3caac] font-medium">Trade not found</p>;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Link href={`/trades/${tradeId}`}>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="text-[#d7e3fb] hover:text-[#BFFF00] hover:bg-[#1f2a3c]">
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Annotate Trade</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-[800] text-[#d7e3fb]">Annotate Trade</h1>
+          <p className="text-sm text-[#c3caac] font-medium">
             #{tradeId} · {trade.symbol} · {trade.direction}
           </p>
         </div>
       </div>
 
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
-          <CardTitle>Trade Annotation</CardTitle>
+          <CardTitle className="font-bold text-[#d7e3fb]">Trade Annotation</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -247,11 +158,16 @@ export function AnnotateForm({ tradeId }: AnnotateFormProps) {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel className="font-bold text-[#c3caac]">Notes</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="What did you learn from this trade?"
-                        className="min-h-[100px]"
+                        className={cn(
+                          'min-h-[100px] rounded-[12px] bg-[#101c2d]',
+                          'border-[rgba(255,255,255,0.1)] text-[#d7e3fb]',
+                          'placeholder:text-[#c3caac]',
+                          'focus:border-[#BFFF00] focus:ring-[#BFFF00]'
+                        )}
                         {...field}
                       />
                     </FormControl>
@@ -261,12 +177,19 @@ export function AnnotateForm({ tradeId }: AnnotateFormProps) {
               />
 
               <div className="flex gap-3">
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                <Button 
+                  variant="neon"
+                  type="submit" 
+                  disabled={form.formState.isSubmitting}
+                >
                   <Save className="h-4 w-4 mr-1" />{' '}
                   {form.formState.isSubmitting ? 'Saving...' : 'Save Annotation'}
                 </Button>
                 <Link href={`/trades/${tradeId}`}>
-                  <Button variant="outline" type="button">
+                  <Button 
+                    variant="neon-outline"
+                    type="button"
+                  >
                     Cancel
                   </Button>
                 </Link>

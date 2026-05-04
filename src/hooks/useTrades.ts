@@ -1,12 +1,27 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import type { Trade } from '@/lib/types';
-import * as db from '@/lib/db';
-import { getErrorMessage } from '@/lib/errors';
+import type { Trade } from '@/lib/domain/types';
+import * as db from '@/lib/infrastructure/db';
+import { getErrorMessage } from '@/lib/utils/errors';
+import { useOptimisticState } from './useOptimisticState';
+
+/**
+ * Hook for managing trades with optimistic updates.
+ * 
+ * Uses optimistic updates with snapshot rollback to avoid unnecessary IndexedDB reads.
+ * When a mutation succeeds, the state is updated optimistically.
+ * When a mutation fails, the state is rolled back to the previous snapshot.
+ */
+
+export interface AddTradeResult {
+  success: boolean;
+  id?: number;
+  error?: string;
+}
 
 export function useTrades() {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const { state: trades, setState: setTrades, withOptimistic } = useOptimisticState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,38 +36,91 @@ export function useTrades() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setTrades]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchTrades is stable useCallback that manages its own loading state
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchTrades manages its own loading/error state
     fetchTrades();
   }, [fetchTrades]);
 
-  const addTrade = useCallback(async (trade: Omit<Trade, 'id'>) => {
-    const id = await db.addTrade(trade);
-    await fetchTrades();
-    return id;
-  }, [fetchTrades]);
+  const addTrade = useCallback(async (trade: Omit<Trade, 'id'>): Promise<AddTradeResult> => {
+    let id: number | undefined;
+    try {
+      await withOptimistic(
+        async () => {
+          id = await db.addTrade(trade);
+          return id;
+        },
+        (prev) => [{ ...trade, id: id! } as unknown as Trade, ...prev],
+      );
+      // Fix up the optimistic item with the real ID (in case of any race conditions)
+      setTrades(prev => prev.map((t, i) => i === 0 && id !== undefined ? { ...t, id } : t));
+      return { success: true, id: id! };
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }, [withOptimistic, setTrades, setError]);
 
   const updateTrade = useCallback(async (id: number, data: Partial<Trade>) => {
-    await db.updateTrade(id, data);
-    await fetchTrades();
-  }, [fetchTrades]);
+    try {
+      await withOptimistic(
+        () => db.updateTrade(id, data),
+        (prev) => prev.map(t => t.id === id ? { ...t, ...data } : t),
+      );
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setError(errorMessage);
+      throw error;
+    }
+  }, [withOptimistic, setError]);
 
   const deleteTrade = useCallback(async (id: number) => {
-    await db.deleteTrade(id);
-    await fetchTrades();
-  }, [fetchTrades]);
+    try {
+      await withOptimistic(
+        () => db.deleteTrade(id),
+        (prev) => prev.filter(t => t.id !== id),
+      );
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setError(errorMessage);
+      throw error;
+    }
+  }, [withOptimistic, setError]);
 
   const bulkAddTrades = useCallback(async (newTrades: Omit<Trade, 'id'>[]) => {
-    await db.bulkAddTrades(newTrades);
-    await fetchTrades();
-  }, [fetchTrades]);
+    let ids: number[] = [];
+    try {
+      await withOptimistic(
+        async () => {
+          ids = await db.bulkAddTrades(newTrades);
+          return ids;
+        },
+        (prev) => {
+          const tradesWithIds: Trade[] = newTrades.map((t, i) => ({ ...t, id: ids[i] } as Trade));
+          return [...tradesWithIds, ...prev];
+        },
+      );
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setError(errorMessage);
+      throw error;
+    }
+  }, [withOptimistic, setError]);
 
   const clearAll = useCallback(async () => {
-    await db.clearAllTrades();
-    await fetchTrades();
-  }, [fetchTrades]);
+    try {
+      await withOptimistic(
+        () => db.clearAllTrades(),
+        () => [],
+      );
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      setError(errorMessage);
+      throw error;
+    }
+  }, [withOptimistic, setError]);
 
   return {
     trades,
