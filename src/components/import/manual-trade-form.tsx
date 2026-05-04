@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { TradeFormValues } from '@/lib/import-schema';
-import { EXCHANGES } from '@/lib/import-constants';
+import type { TradeFormValues } from '@/lib/import-page/import-schema';
+import { EXCHANGES } from '@/lib/import-page/import-constants';
 import {
   SETUP_TYPES,
   EXIT_TYPES,
   MARKET_CONDITIONS,
-} from '@/lib/field-options';
+} from '@/lib/ui/field-options';
 import { FormSelect } from '@/components/form/form-select';
 import { FormInput } from '@/components/form/form-input';
 import { useManualTradeForm } from '@/hooks/useManualTradeForm';
@@ -23,7 +23,7 @@ interface ExchangeDataFieldsProps {
 function ExchangeDataFields({ control }: ExchangeDataFieldsProps) {
   return (
     <div>
-      <h3 className="text-sm font-semibold mb-4">Exchange Data</h3>
+      <h3 className="text-sm font-bold text-[#d7e3fb] mb-4">Exchange Data</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormSelect
           control={control}
@@ -124,7 +124,7 @@ interface AnnotationFieldsProps {
 function AnnotationFields({ control }: AnnotationFieldsProps) {
   return (
     <div>
-      <h3 className="text-sm font-semibold mb-4">Annotation (Optional)</h3>
+      <h3 className="text-sm font-bold text-[#d7e3fb] mb-4">Annotation (Optional)</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormSelect
           control={control}
@@ -158,20 +158,24 @@ export function ManualTradeForm() {
   const { form, onSubmit } = useManualTradeForm();
 
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardHeader>
-        <CardTitle>New Trade</CardTitle>
+        <CardTitle className="font-bold text-[#d7e3fb]">New Trade</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <ExchangeDataFields control={form.control} />
 
-            <Separator />
+            <Separator className="bg-[rgba(255,255,255,0.1)]" />
 
             <AnnotationFields control={form.control} />
 
-            <Button type="submit" disabled={form.formState.isSubmitting}>
+            <Button 
+              variant="neon"
+              type="submit" 
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting ? 'Adding...' : 'Add Trade'}
             </Button>
           </form>

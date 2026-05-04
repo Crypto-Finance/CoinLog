@@ -41,6 +41,23 @@ function isValidIp(ip: string): boolean {
 // In-memory rate limit fallback when Upstash is not configured
 const memoryStore = new Map<string, { count: number; resetAt: number }>();
 
+// Cleanup expired entries every 60 seconds to prevent unbounded growth
+if (typeof global !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of memoryStore.entries()) {
+      if (now > entry.resetAt) {
+        memoryStore.delete(key);
+      }
+    }
+  }, 60_000);
+}
+
+// Warn in development if Upstash is not configured
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  console.warn('Rate limit: Using in-memory store (not production-safe). Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for production.');
+}
+
 function memoryLimiter(identifier: string, maxRequests: number, windowMs: number) {
   const now = Date.now();
   const entry = memoryStore.get(identifier);

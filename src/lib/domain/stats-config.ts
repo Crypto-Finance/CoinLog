@@ -1,5 +1,6 @@
-import type { TradeStats } from '@/lib/types';
-import { formatCurrency, formatPnL, pnlColor, profitFactorColor, winRateColor } from '@/lib/utils';
+import type { TradeStats } from './types';
+import { formatCurrency, formatPnL, profitFactorColor } from '../utils/utils';
+import { pnlColor, winRateColor } from '../ui/pnl-styles';
 import {
   TrendingDown,
   Target,

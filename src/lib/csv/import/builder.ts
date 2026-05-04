@@ -1,6 +1,5 @@
-import type { Trade } from '../types';
-import { createTrade } from '../trade-factory';
-import { computeIsAnnotated } from './index';
+import type { Trade } from '../../domain/types';
+import { createTrade } from '../../domain/trade-factory';
 import type { FieldAccessor, HeaderMap } from './validator';
 import { parseCSVLine } from './parser';
 
@@ -12,6 +11,29 @@ import { parseCSVLine } from './parser';
  * - Computes derived fields (isAnnotated)
  * - Returns properly typed trade objects
  */
+
+// Annotation fields used to compute isAnnotated
+const ANNOTATION_FIELDS: (keyof Trade)[] = [
+  'setupType',
+  'stopLoss',
+  'takeProfit',
+  'riskAmount',
+  'rrPlanned',
+  'rrActual',
+  'exitType',
+  'marketCondition',
+  'notes',
+];
+
+/**
+ * Compute isAnnotated from annotation fields.
+ */
+export function computeIsAnnotated(trade: Partial<Trade>): boolean {
+  return ANNOTATION_FIELDS.some((field) => {
+    const val = trade[field];
+    return typeof val === 'string' && val.trim().length > 0;
+  });
+}
 
 /**
  * Build a trade object from a CSV row using a field accessor.

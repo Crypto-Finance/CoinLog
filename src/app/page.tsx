@@ -1,21 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { usePageTradeData } from '@/hooks/usePageTradeData';
-import { calculateStats } from '@/lib/stats';
-import {
-  formatPnL,
-  pnlColor,
-  formatDate,
-  cn,
-  formatProfitFactor,
-  profitFactorColor,
-  winRateColor,
-} from '@/lib/utils';
+import { calculateStats, formatPnL, formatDate, cn, formatProfitFactor, profitFactorColor, pnlColor, winRateColor } from '@/lib';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SymbolFilter } from '@/components/common/symbol-filter';
 import { LoadingState } from '@/components/common/loading-state';
+import { StatCard } from '@/components/stats/stat-card';
 import { ArrowRight, BarChart3, Percent, DollarSign, TrendingUp } from 'lucide-react';
 import { DirectionBadge } from '@/components/trades/direction-badge';
 import { AnnotatedBadge } from '@/components/trades/annotated-badge';
@@ -24,9 +17,9 @@ export default function DashboardPage() {
   const { trades, loading, selectedSymbol, setSelectedSymbol, filteredTrades } = usePageTradeData();
 
   const stats = calculateStats(filteredTrades);
-  const recentTrades = [...filteredTrades]
+  const recentTrades = useMemo(() => [...filteredTrades]
     .sort((a, b) => new Date(b.openTime).getTime() - new Date(a.openTime).getTime())
-    .slice(0, 5);
+    .slice(0, 5), [filteredTrades]);
 
   if (loading) {
     return <LoadingState message="Loading dashboard..." />;
@@ -61,57 +54,29 @@ export default function DashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Trades</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTrades}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Win Rate</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={cn(
-              'text-2xl font-bold',
-              winRateColor(stats.winRate)
-            )}>
-              {stats.winRate}%
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total P&L</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={cn('text-2xl font-bold', pnlColor(stats.totalPnL))}>
-              {formatPnL(stats.totalPnL)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Profit Factor</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={cn(
-              'text-2xl font-bold',
-              profitFactorColor(stats.profitFactor)
-            )}>
-              {formatProfitFactor(stats.profitFactor)}
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Trades"
+          value={stats.totalTrades}
+          icon={BarChart3}
+        />
+        <StatCard
+          title="Win Rate"
+          value={`${stats.winRate}%`}
+          icon={Percent}
+          color={winRateColor(stats.winRate)}
+        />
+        <StatCard
+          title="Total P&L"
+          value={formatPnL(stats.totalPnL)}
+          icon={DollarSign}
+          color={pnlColor(stats.totalPnL)}
+        />
+        <StatCard
+          title="Profit Factor"
+          value={formatProfitFactor(stats.profitFactor)}
+          icon={TrendingUp}
+          color={profitFactorColor(stats.profitFactor)}
+        />
       </div>
 
       {/* Recent Trades */}
@@ -136,7 +101,10 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {recentTrades.map((trade) => (
                 <Link key={trade.id} href={`/trades/${trade.id}`}>
-                  <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <div className={cn(
+                    'flex items-center justify-between p-3 rounded-lg border',
+                    'hover:bg-muted/50 transition-colors'
+                  )}>
                     <div className="flex items-center gap-4">
                       <DirectionBadge direction={trade.direction} />
                       <div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Trade } from '@/lib/types';
+import type { Trade } from '@/lib/domain/types';
 import {
   Select,
   SelectContent,
@@ -37,15 +37,15 @@ export function SymbolFilter({ trades, selectedSymbol, onSymbolChange }: SymbolF
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__all__">All Symbols</SelectItem>
+          <SelectItem value="__all__" className="focus:text-[#BFFF00]">All Symbols</SelectItem>
           {uniqueSymbols.map((symbol) => (
-            <SelectItem key={symbol} value={symbol}>
+            <SelectItem key={symbol} value={symbol} className="focus:text-[#BFFF00]">
               {symbol}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      <Badge variant="secondary">
+      <Badge variant="neon-outline" className="rounded-full font-bold">
         {symbolCount} symbol{symbolCount !== 1 ? 's' : ''}
       </Badge>
     </div>

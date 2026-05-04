@@ -50,36 +50,12 @@ export function formatPrice(value: string | number, maxDecimals = 5): string {
   return `$${value.toFixed(maxDecimals)}`;
 }
 
-export function pnlColor(value: string | number): string {
-  const num = toNumber(value);
-  if (num > 0) return 'text-emerald-600';
-  if (num < 0) return 'text-red-600';
-  return 'text-muted-foreground';
-}
-
-export function pnlBg(value: string | number): string {
-  const num = toNumber(value);
-  if (num > 0) return 'bg-emerald-50 text-emerald-700';
-  if (num < 0) return 'bg-red-50 text-red-700';
-  return 'bg-muted text-muted-foreground';
-}
-
 export function pluralize(n: number, singular: string, plural?: string): string {
   return n === 1 ? singular : (plural ?? `${singular}s`);
 }
 
 export function toNumber(value: string | number): number {
   return typeof value === 'string' ? parseFloat(value) : value;
-}
-
-/**
- * Return border + background classes for a P&L card.
- */
-export function pnlCardClass(value: string | number): string {
-  const num = toNumber(value);
-  if (num > 0) return 'border-emerald-200 bg-emerald-50/50';
-  if (num < 0) return 'border-red-200 bg-red-50/50';
-  return '';
 }
 
 export function formatProfitFactor(value: string): string {
@@ -92,7 +68,11 @@ export function profitFactorColor(value: string): string {
     : 'text-red-600';
 }
 
-export function winRateColor(winRate: string | number): string {
-  const num = typeof winRate === 'string' ? parseFloat(winRate) : winRate;
-  return num >= 50 ? 'text-emerald-600' : 'text-red-600';
+/**
+ * Check if a file is a CSV file by extension.
+ * @param file - File to check
+ * @returns true if file name ends with .csv
+ */
+export function isCsvFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.csv');
 }

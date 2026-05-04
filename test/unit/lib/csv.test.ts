@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseCSV, exportToCSV, computeIsAnnotated } from '@/lib/csv';
-import type { Trade } from '@/lib/types';
+import { parseCSV, exportToCSV, computeIsAnnotated } from '@/lib/csv/import';
+import type { Trade } from '@/lib/domain/types';
 
 describe('parseCSV', () => {
   const validCSV = `exchange,exchangeOrderId,symbol,direction,entryPrice,exitPrice,quantity,fee,pnl,openTime,closeTime,setupType,stopLoss,takeProfit,riskAmount,rrPlanned,rrActual,exitType,marketCondition,notes,isAnnotated

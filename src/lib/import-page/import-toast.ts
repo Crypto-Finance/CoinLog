@@ -5,8 +5,11 @@ import { toast } from 'sonner';
  */
 export function showImportSuccess(inserted: number, skipped: number) {
   if (inserted > 0) {
+    const skippedMsg = skipped > 0 
+      ? `, skipped ${skipped} duplicate${skipped > 1 ? 's' : ''}` 
+      : '';
     toast.success(
-      `Imported ${inserted} trade${inserted > 1 ? 's' : ''}${skipped > 0 ? `, skipped ${skipped} duplicate${skipped > 1 ? 's' : ''}` : ''}`,
+      `Imported ${inserted} trade${inserted > 1 ? 's' : ''}${skippedMsg}`,
     );
   } else {
     toast.info(

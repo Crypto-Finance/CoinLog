@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { mapBybitToTrade, type BybitClosedPnlEntry } from '@/lib/bybit';
+import { mapBybitToTrade, type BybitClosedPnlEntry } from './mapper';
 
 const BYBIT_API_URL = process.env.BYBIT_API_URL || 'https://api.bybit.com';
 const MAX_DAY_WINDOW = 7 * 24 * 60 * 60 * 1000; // 7 days in ms

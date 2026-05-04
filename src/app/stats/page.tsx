@@ -1,8 +1,8 @@
 'use client';
 
 import { usePageTradeData } from '@/hooks/usePageTradeData';
-import { calculateStats } from '@/lib/stats';
-import { pluralize } from '@/lib/utils';
+import { calculateStats } from '@/lib/domain/stats';
+import { pluralize } from '@/lib/utils/utils';
 import { StatsDashboard } from '@/components/stats/stats-dashboard';
 import { SymbolFilter } from '@/components/common/symbol-filter';
 import { LoadingState } from '@/components/common/loading-state';

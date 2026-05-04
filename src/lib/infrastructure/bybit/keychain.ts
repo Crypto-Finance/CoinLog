@@ -6,7 +6,7 @@
 // against XSS attacks reading plaintext credentials.
 // ---------------------------------------------------------------------------
 
-import { encrypt, decrypt } from './crypto';
+import { encrypt, decrypt } from '../../security/crypto';
 
 const API_KEY_STORAGE = 'CoinLog.bybit.apiKey';
 const API_SECRET_STORAGE = 'CoinLog.bybit.apiSecret';

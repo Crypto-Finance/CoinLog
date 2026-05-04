@@ -13,7 +13,7 @@ interface ImportParams {
 }
 
 interface ImportResult {
-  trades: import('@/lib/types').Trade[];
+  trades: import('../../domain/types').Trade[];
   totalFetched: number;
 }
 

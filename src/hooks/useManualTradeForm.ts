@@ -5,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { useTrades } from '@/hooks/useTrades';
 import { toast } from 'sonner';
-import { createTrade } from '@/lib/trade-factory';
-import { tradeSchema, type TradeFormValues } from '@/lib/import-schema';
-import { computeIsAnnotated } from '@/lib/import';
+import { createTrade } from '@/lib/domain/trade-factory';
+import { tradeSchema, type TradeFormValues } from '@/lib/import-page/import-schema';
+import { computeIsAnnotated } from '@/lib/csv/import';
 
 /**
  * Default values for all annotation fields.
@@ -89,10 +89,14 @@ export function useManualTradeForm() {
         isAnnotated,
       });
 
-      await addTrade(trade);
-      toast.success('Trade added successfully');
-      form.reset();
-      router.push('/trades');
+      const result = await addTrade(trade);
+      if (result.success) {
+        toast.success('Trade added successfully');
+        form.reset();
+        router.push('/trades');
+      } else {
+        toast.error(result.error || 'Failed to add trade');
+      }
     } catch {
       toast.error('Failed to add trade');
     }

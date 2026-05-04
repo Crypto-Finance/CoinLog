@@ -1,5 +1,5 @@
-import type { Trade } from './types';
-import { createTrade } from './trade-factory';
+import type { Trade } from '../../domain/types';
+import { createTrade } from '../../domain/trade-factory';
 
 // ---------------------------------------------------------------------------
 // Bybit API response types

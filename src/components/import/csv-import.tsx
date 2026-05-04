@@ -2,10 +2,10 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { parseCSV } from '@/lib/csv';
-import { addTradesWithDedup } from '@/lib/db';
-import { showImportSuccess } from '@/lib/import-toast';
-import type { Trade } from '@/lib/types';
+import { parseCSV } from '@/lib/csv/import';
+import { addTradesWithDedup } from '@/lib/infrastructure/db';
+import { showImportSuccess } from '@/lib/import-page/import-toast';
+import type { Trade } from '@/lib/domain/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload } from 'lucide-react';
@@ -13,10 +13,10 @@ import { toast } from 'sonner';
 import { FileDropZone } from './file-drop-zone';
 import { TradePreviewTable } from './trade-preview-table';
 import { ImportError, ImportResult } from './import-result';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/lib/utils/errors';
 
-const CSV_HINT =
-  'Max 5MB, 10,000 trades. Headers: exchange, exchangeOrderId, symbol, direction, entryPrice, exitPrice, quantity, fee, pnl, openTime';
+const CSV_HINT = `Max 5MB, 10,000 trades. Headers: exchange, exchangeOrderId, symbol, direction,
+entryPrice, exitPrice, quantity, fee, pnl, openTime`;
 
 const MAX_CSV_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TRADES = 10_000;
@@ -35,7 +35,6 @@ export function CsvImport() {
       setParsedTrades(null);
       setResult(null);
 
-      // File size check
       if (file.size > MAX_CSV_SIZE) {
         const msg = `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 5MB.`;
         setError(msg);
@@ -54,7 +53,6 @@ export function CsvImport() {
 
           const trades = parseCSV(text);
 
-          // Trade count limit
           if (trades.length > MAX_TRADES) {
             const msg = `Too many trades (${trades.length}). Max ${MAX_TRADES} per import.`;
             setError(msg);
@@ -95,7 +93,6 @@ export function CsvImport() {
       setResult({ inserted, skipped });
       showImportSuccess(inserted, skipped);
 
-      // Reset after successful import
       setParsedTrades(null);
       router.refresh();
     } catch (err) {
@@ -113,14 +110,14 @@ export function CsvImport() {
   }, []);
 
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-4 w-4" />
+        <CardTitle className="flex items-center gap-2 font-bold text-[#d7e3fb]">
+          <Upload className="h-4 w-4 text-[#BFFF00]" />
           CSV Import
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* File Input */}
         <FileDropZone
           onFileSelect={handleFileSelect}
@@ -139,13 +136,17 @@ export function CsvImport() {
             {/* Action Buttons */}
             <div className="flex gap-2">
               <Button
+                variant="neon"
                 onClick={handleImport}
                 disabled={importing}
-                className="flex-1 md:flex-none"
               >
                 {importing ? 'Importing...' : `Import ${parsedTrades.length} Trade(s)`}
               </Button>
-              <Button variant="outline" onClick={handleReset} disabled={importing}>
+              <Button 
+                variant="neon-outline" 
+                onClick={handleReset} 
+                disabled={importing}
+              >
                 Cancel
               </Button>
             </div>

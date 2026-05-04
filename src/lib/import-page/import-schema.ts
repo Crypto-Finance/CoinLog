@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { emptyableString, nonNegativeNumber, positiveNumber, optionalNumber } from './schema-utils';
+import { emptyableString, nonNegativeNumber, positiveNumber, optionalNumber } from '../ui/schema-utils';
 
 /**
  * Zod schema for the manual trade import form.

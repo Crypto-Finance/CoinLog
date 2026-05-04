@@ -17,8 +17,8 @@ export function FormSelect<T extends FieldValues>({ control, name, label, option
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
-          <Select onValueChange={field.onChange} value={field.value ?? ''}>
+          <FormLabel className="font-bold text-[#c3caac] text-sm">{label}</FormLabel>
+          <Select onValueChange={(val) => field.onChange(val === '' ? undefined : val)} value={field.value || ''}>
             <FormControl>
               <SelectTrigger>
                 <SelectValue placeholder={placeholder} />
@@ -26,7 +26,11 @@ export function FormSelect<T extends FieldValues>({ control, name, label, option
             </FormControl>
             <SelectContent>
               {options.map((option) => (
-                <SelectItem key={option} value={option}>
+                <SelectItem 
+                  key={option} 
+                  value={option}
+                  className="focus:text-[#BFFF00]"
+                >
                   {option}
                 </SelectItem>
               ))}

@@ -19,7 +19,9 @@ export function sanitizeExternalError(error: unknown): string {
   }
   // 403 Forbidden - geographic restriction (check specific before broad)
   if (message.includes('403') || message.includes('forbidden')) {
-    return 'The exchange rejected this request (HTTP 403). This may be due to geographic restrictions. Please check your API key settings or try a different API endpoint.';
+    return 'The exchange rejected this request (HTTP 403). ' +
+      'This may be due to geographic restrictions. ' +
+      'Please check your API key settings or try a different API endpoint.';
   }
   if (message.includes('network') || message.includes('fetch') || message.includes('connect')) {
     return 'Unable to connect to the exchange. Please try again later.';

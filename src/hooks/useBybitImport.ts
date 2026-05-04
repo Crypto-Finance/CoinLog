@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredKeys } from '@/lib/bybit-keychain';
-import { importBybitTrades } from '@/lib/bybit-client';
-import * as db from '@/lib/db';
-import { showImportSuccess } from '@/lib/import-toast';
+import { getStoredKeys } from '@/lib/infrastructure/bybit/keychain';
+import { importBybitTrades } from '@/lib/infrastructure/bybit/client';
+import * as db from '@/lib/infrastructure/db';
+import { showImportSuccess } from '@/lib/import-page/import-toast';
 import { toast } from 'sonner';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/lib/utils/errors';
 
 interface UseBybitImportOptions {
   hasKeys: boolean;

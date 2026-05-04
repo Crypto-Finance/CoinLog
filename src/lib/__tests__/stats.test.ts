@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calculateStats } from '../stats';
-import type { Trade } from '../types';
+import { calculateStats } from '../domain/stats';
+import type { Trade } from '../domain/types';
 
 // Helper to create a test trade
 function createTrade(overrides: Partial<Trade> = {}): Trade {

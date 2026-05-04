@@ -12,8 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { storeKeys } from '@/lib/bybit-keychain';
+import { storeKeys } from '@/lib/infrastructure/bybit/keychain';
 import { toast } from 'sonner';
+import { getPassphraseError } from '@/lib/security/passphrase-strength';
 
 interface BybitConfigDialogProps {
   open: boolean;
@@ -38,20 +39,9 @@ export function BybitConfigDialog({
       return;
     }
 
-    if (!passphrase || passphrase.length < 12) {
-      toast.error('Passphrase must be at least 12 characters');
-      return;
-    }
-
-    // Check passphrase strength
-    const hasUpper = /[A-Z]/.test(passphrase);
-    const hasLower = /[a-z]/.test(passphrase);
-    const hasNumber = /[0-9]/.test(passphrase);
-    const hasSpecial = /[^A-Za-z0-9]/.test(passphrase);
-    const strength = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
-
-    if (strength < 3) {
-      toast.error('Passphrase should include uppercase, lowercase, numbers, and symbols');
+    const passphraseError = getPassphraseError(passphrase);
+    if (passphraseError) {
+      toast.error(passphraseError);
       return;
     }
 
@@ -80,16 +70,16 @@ export function BybitConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="shadow-none">
         <DialogHeader>
-          <DialogTitle>Configure Bybit API</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="font-bold text-[#d7e3fb]">Configure Bybit API</DialogTitle>
+          <DialogDescription className="text-[#c3caac] font-medium">
             Enter your Bybit API key and secret. Create read-only keys at{' '}
             <a
               href="https://www.bybit.com/app/user/api-management"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-foreground"
+              className="underline hover:text-[#BFFF00]"
             >
               Bybit API Management
             </a>
@@ -98,7 +88,7 @@ export function BybitConfigDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="bybit-api-key">API Key</Label>
+            <Label htmlFor="bybit-api-key" className="font-bold text-[#c3caac] text-sm">API Key</Label>
             <Input
               id="bybit-api-key"
               placeholder="Enter your API key"
@@ -109,7 +99,7 @@ export function BybitConfigDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bybit-api-secret">API Secret</Label>
+            <Label htmlFor="bybit-api-secret" className="font-bold text-[#c3caac] text-sm">API Secret</Label>
             <Input
               id="bybit-api-secret"
               type="password"
@@ -121,7 +111,7 @@ export function BybitConfigDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bybit-passphrase">
+            <Label htmlFor="bybit-passphrase" className="font-bold text-[#c3caac] text-sm">
               Encryption Passphrase
             </Label>
             <Input
@@ -135,7 +125,9 @@ export function BybitConfigDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bybit-passphrase-confirm">Confirm Passphrase</Label>
+            <Label htmlFor="bybit-passphrase-confirm" className="font-bold text-[#c3caac] text-sm">
+              Confirm Passphrase
+            </Label>
             <Input
               id="bybit-passphrase-confirm"
               type="password"
@@ -148,10 +140,17 @@ export function BybitConfigDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="neon-outline" 
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button 
+            variant="neon"
+            onClick={handleSave} 
+            disabled={saving}
+          >
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogFooter>

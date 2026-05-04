@@ -1,16 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import type { Trade } from '@/lib/types';
-import {
-  formatCurrency,
-  formatDate,
-  formatPnL,
-  pnlColor,
-  pnlCardClass,
-  cn,
-  formatPrice,
-} from '@/lib/utils';
+import type { Trade } from '@/lib';
+import { formatCurrency, formatDate, formatPnL, formatPrice } from '@/lib';
+import { pnlColor, pnlBorder } from '@/lib/ui/pnl-styles';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -25,32 +18,34 @@ interface TradeDetailProps {
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>
-      <span className="text-sm font-medium">{value || '—'}</span>
+      <span className="text-xs font-bold text-[#c3caac] uppercase tracking-wide">{label}</span>
+      <span className="text-sm font-bold text-[#d7e3fb]">{value || '—'}</span>
     </div>
   );
 }
 
 export function TradeDetail({ trade }: TradeDetailProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/trades">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="text-[#d7e3fb] hover:text-[#BFFF00] hover:bg-[#1f2a3c]">
               <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{trade.symbol}</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-[800] text-[#d7e3fb]">{trade.symbol}</h1>
+            <p className="text-sm text-[#c3caac] font-medium">
               Trade #{trade.id} · {trade.exchange}
             </p>
           </div>
         </div>
         <Link href={`/trades/${trade.id}/annotate`}>
-          <Button variant={trade.isAnnotated ? 'outline' : 'default'}>
+          <Button 
+            variant={trade.isAnnotated ? 'neon-outline' : 'neon'}
+          >
             <Pencil className="h-4 w-4 mr-1" />
             {trade.isAnnotated ? 'Edit Annotation' : 'Annotate Trade'}
           </Button>
@@ -58,12 +53,12 @@ export function TradeDetail({ trade }: TradeDetailProps) {
       </div>
 
       {/* PnL Banner */}
-      <Card className={cn('border-2', pnlCardClass(trade.pnl))}>
+      <Card className={`border-2 ${pnlBorder(trade.pnl)} shadow-none`}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">P&L</p>
-              <p className={cn('text-3xl font-bold', pnlColor(trade.pnl))}>
+              <p className="text-sm font-bold text-[#c3caac]">P&L</p>
+              <p className={`text-3xl font-[800] ${pnlColor(trade.pnl)}`}>
                 {formatPnL(trade.pnl)}
               </p>
             </div>
@@ -78,9 +73,9 @@ export function TradeDetail({ trade }: TradeDetailProps) {
       </Card>
 
       {/* Exchange Data */}
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
-          <CardTitle className="text-base">Exchange Data</CardTitle>
+          <CardTitle className="text-base font-bold text-[#d7e3fb]">Exchange Data</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -99,9 +94,9 @@ export function TradeDetail({ trade }: TradeDetailProps) {
       </Card>
 
       {/* Annotation Fields */}
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
-          <CardTitle className="text-base">Trade Annotation</CardTitle>
+          <CardTitle className="text-base font-bold text-[#d7e3fb]">Trade Annotation</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -116,7 +111,7 @@ export function TradeDetail({ trade }: TradeDetailProps) {
           </div>
           {trade.notes && (
             <>
-              <Separator className="my-4" />
+              <Separator className="my-4 bg-[rgba(255,255,255,0.1)]" />
               <Field label="Notes" value={trade.notes} />
             </>
           )}

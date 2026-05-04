@@ -1,8 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Trade } from './types';
+import type { Trade } from '../domain/types';
+
+// TradeInput is the same as Trade but without the id field
+// This matches what IndexedDB expects when adding new records
+export type TradeInput = Omit<Trade, 'id'>;
 
 interface CoinLogDB extends DBSchema {
   trades: {
+    // id is auto-assigned by IndexedDB (see CoinLogDB.trades.key)
     key: number;
     value: Trade;
     indexes: {
@@ -50,7 +55,7 @@ export async function getTrade(id: number): Promise<Trade | undefined> {
   return db.get(STORE_NAME, id);
 }
 
-export async function addTrade(trade: Omit<Trade, 'id'>): Promise<number> {
+export async function addTrade(trade: TradeInput): Promise<number> {
   const db = await getDB();
   return db.add(STORE_NAME, trade as Trade);
 }
@@ -67,7 +72,7 @@ export async function deleteTrade(id: number): Promise<void> {
   await db.delete(STORE_NAME, id);
 }
 
-export async function bulkAddTrades(trades: Omit<Trade, 'id'>[]): Promise<number[]> {
+export async function bulkAddTrades(trades: TradeInput[]): Promise<number[]> {
   const db = await getDB();
   const tx = db.transaction(STORE_NAME, 'readwrite');
   const ids = await Promise.all(
@@ -92,7 +97,7 @@ export interface DedupResult {
 }
 
 export async function addTradesWithDedup(
-  trades: Omit<Trade, 'id'>[],
+  trades: TradeInput[],
 ): Promise<DedupResult> {
   const db = await getDB();
   const existing = await db.getAll(STORE_NAME);

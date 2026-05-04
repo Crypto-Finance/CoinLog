@@ -39,10 +39,3 @@ export interface TradeStats {
   maxStreakLoss: number;
   avgRR: string;
 }
-
-export type SortDirection = 'asc' | 'desc' | null;
-
-export interface SortConfig {
-  key: keyof Trade;
-  direction: SortDirection;
-}

@@ -2,24 +2,32 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Mock the dependencies
-vi.mock('@/lib/rate-limit', () => ({
+vi.mock('@/lib/infrastructure/rate-limit', () => ({
   checkRateLimit: vi.fn(),
 }));
 
-vi.mock('@/lib/csrf-check', () => ({
+vi.mock('@/lib/security/csrf-check', () => ({
   verifyOrigin: vi.fn(),
 }));
 
-import { checkRateLimit } from '@/lib/rate-limit';
-import { verifyOrigin } from '@/lib/csrf-check';
-import { runImportGuards } from '@/lib/bybit-import-guards';
+vi.mock('@/lib/infrastructure/api/auth', () => ({
+  verifyApiAuth: vi.fn(),
+}));
+
+import { checkRateLimit } from '@/lib/infrastructure/rate-limit';
+import { verifyOrigin } from '@/lib/security/csrf-check';
+import { verifyApiAuth } from '@/lib/infrastructure/api/auth';
+import { runImportGuards } from '@/lib/infrastructure/bybit/guards';
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 const mockVerifyOrigin = vi.mocked(verifyOrigin);
+const mockVerifyApiAuth = vi.mocked(verifyApiAuth);
 
 describe('Bybit Import API Guard Chain', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: API auth passes for tests
+    mockVerifyApiAuth.mockResolvedValue(true);
   });
 
   afterEach(() => {

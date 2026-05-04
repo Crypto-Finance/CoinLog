@@ -9,8 +9,8 @@ import {
   addTradesWithDedup,
   clearAllTrades,
   resetDb,
-} from '../db';
-import type { Trade } from '../types';
+} from '../infrastructure/db';
+import type { Trade } from '../domain/types';
 
 // Helper to create a test trade
 function createTestTrade(overrides: Partial<Omit<Trade, 'id'>> = {}): Omit<Trade, 'id'> {

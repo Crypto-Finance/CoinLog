@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { EXIT_TYPES, MARKET_CONDITIONS } from './field-options';
-import { optionalNonNegativeNumber, optionalNumberWithNegative } from './schema-utils';
+import { EXIT_TYPES, MARKET_CONDITIONS } from '../ui/field-options';
+import { optionalNonNegativeNumber, optionalNumberWithNegative } from '../ui/schema-utils';
 
 export const annotateSchema = z.object({
   setupType: z.string().optional(),

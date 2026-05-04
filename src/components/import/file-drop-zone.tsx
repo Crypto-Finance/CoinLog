@@ -1,8 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText } from 'lucide-react';
+import { cn, isCsvFile } from '@/lib/utils/utils';
+import { toast } from 'sonner';
 
 interface FileDropZoneProps {
   /** Called with the selected File object */
@@ -23,12 +25,14 @@ export function FileDropZone({
   hint,
 }: FileDropZoneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith('.csv')) {
+    if (!isCsvFile(file)) {
+      toast.error('Please select a CSV file');
       return;
     }
 
@@ -38,12 +42,57 @@ export function FileDropZone({
     e.target.value = '';
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    if (!disabled) {
+      setIsDragging(true);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (disabled) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!isCsvFile(file)) {
+      toast.error('Please drop a CSV file');
+      return;
+    }
+
+    onFileSelect(file);
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg">
-      <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-      <p className="text-sm font-medium mb-2">Upload your trade CSV file</p>
+    <div 
+      className={cn(
+        "flex flex-col items-center justify-center py-8 rounded-[24px] transition-all duration-200",
+        "border-2 border-dashed",
+        isDragging 
+          ? "border-[#BFFF00] bg-[#BFFF00]/5" 
+          : "border-[rgba(255,255,255,0.2)]",
+        !disabled && "hover:border-[#BFFF00] hover:bg-[#BFFF00]/5",
+        "bg-[#101c2d]"
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <FileText className={cn(
+        "h-10 w-10 mb-3 transition-colors",
+        isDragging ? "text-[#BFFF00]" : "text-[#c3caac]"
+      )} />
+      <p className="text-sm font-bold text-[#d7e3fb] mb-2">Upload your trade CSV file</p>
       {hint && (
-        <p className="text-xs text-muted-foreground mb-4">{hint}</p>
+        <p className="text-xs text-[#c3caac] mb-4 font-medium">{hint}</p>
       )}
       <input
         ref={fileInputRef}
@@ -53,7 +102,7 @@ export function FileDropZone({
         className="hidden"
       />
       <Button
-        variant="outline"
+        variant="neon-outline"
         onClick={() => fileInputRef.current?.click()}
         disabled={disabled}
       >
