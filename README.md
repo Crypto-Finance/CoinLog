@@ -8,6 +8,8 @@
 
 ---
 
+![CoinLog Dashboard](docs/image/CoinLog.png)
+
 ## ✨ Features
 
 ### Core Features
