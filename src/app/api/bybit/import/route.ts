@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runImportGuards, type ImportRequestBody } from '@/lib/bybit-import-guards';
-import { fetchAllTrades } from '@/lib/bybit-api-client';
-import { sanitizeExternalError } from '@/lib/api-errors';
+import { runImportGuards, type ImportRequestBody } from '@/lib/infrastructure/bybit/guards';
+import { fetchAllTrades } from '@/lib/infrastructure/bybit/api-client';
+import { sanitizeExternalError } from '@/lib/infrastructure/api/errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
