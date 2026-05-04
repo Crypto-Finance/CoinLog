@@ -1,5 +1,5 @@
 import { useFilter } from '@/hooks/useFilter';
-import type { Trade } from '@/lib/types';
+import type { Trade } from '@/lib/domain/types';
 
 export function useSymbolFilter(trades: Trade[]) {
   const { filterValue, setFilterValue, filtered } = useFilter(trades, 'symbol');
