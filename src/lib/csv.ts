@@ -1,14 +1,3 @@
-/**
- * CSV Import/Export Utilities - Backward Compatibility Layer
- * 
- * This module now re-exports from the split concern-separated modules:
- * - parser.ts: Generic CSV parsing
- * - validator.ts: Domain validation
- * - builder.ts: Trade construction
- * 
- * @deprecated Import directly from '@/lib/import' instead
- */
-
 export {
   parseCSV,
   exportToCSV,
@@ -21,4 +10,4 @@ export {
   buildTrade,
   rowsToTrades,
   type FieldAccessor,
-} from './import';
+} from './csv/import';
