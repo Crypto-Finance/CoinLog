@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getClientIp } from '@/lib/rate-limit';
+import { getClientIp } from '@/lib/infrastructure/rate-limit';
 
 describe('getClientIp', () => {
   function createMockRequest(headers: Record<string, string | null>): Request {

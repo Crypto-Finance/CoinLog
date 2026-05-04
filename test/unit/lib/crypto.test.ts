@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { encrypt, decrypt } from '@/lib/crypto';
+import { encrypt, decrypt } from '@/lib/security/crypto';
 
 describe('encrypt/decrypt', () => {
   const passphrase = 'test-passphrase-123';

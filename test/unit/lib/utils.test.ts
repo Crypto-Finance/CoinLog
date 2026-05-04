@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatCurrency, formatPnL, pnlColor, formatDate, toNumber, pnlBg } from '@/lib/utils';
+import { formatCurrency, formatPnL, formatDate, toNumber } from '@/lib/utils/utils';
+import { pnlColor, pnlBg } from '@/lib/ui/pnl-styles';
 
 describe('formatCurrency', () => {
   it('should format positive numbers', () => {
@@ -24,6 +25,7 @@ describe('formatCurrency', () => {
 
   it('should return $0.00 for invalid input', () => {
     expect(formatCurrency('invalid')).toBe('$0.00');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing edge case
     expect(formatCurrency(NaN as any)).toBe('$0.00');
   });
 
@@ -54,32 +56,32 @@ describe('formatPnL', () => {
 
 describe('pnlColor', () => {
   it('should return green for positive PnL', () => {
-    expect(pnlColor(100)).toBe('text-emerald-600');
-    expect(pnlColor('100')).toBe('text-emerald-600');
+    expect(pnlColor(100)).toBe('text-[#BFFF00]');
+    expect(pnlColor('100')).toBe('text-[#BFFF00]');
   });
 
   it('should return red for negative PnL', () => {
-    expect(pnlColor(-50)).toBe('text-red-600');
-    expect(pnlColor('-50')).toBe('text-red-600');
+    expect(pnlColor(-50)).toBe('text-[#FFD1DC]');
+    expect(pnlColor('-50')).toBe('text-[#FFD1DC]');
   });
 
   it('should return muted for zero PnL', () => {
-    expect(pnlColor(0)).toBe('text-muted-foreground');
-    expect(pnlColor('0')).toBe('text-muted-foreground');
+    expect(pnlColor(0)).toBe('text-[#c3caac]');
+    expect(pnlColor('0')).toBe('text-[#c3caac]');
   });
 });
 
 describe('pnlBg', () => {
   it('should return green background for positive PnL', () => {
-    expect(pnlBg(100)).toBe('bg-emerald-50 text-emerald-700');
+    expect(pnlBg(100)).toBe('bg-[#BFFF00]/10 text-[#BFFF00]');
   });
 
   it('should return red background for negative PnL', () => {
-    expect(pnlBg(-50)).toBe('bg-red-50 text-red-700');
+    expect(pnlBg(-50)).toBe('bg-[#FFD1DC]/10 text-[#FFD1DC]');
   });
 
   it('should return muted background for zero PnL', () => {
-    expect(pnlBg(0)).toBe('bg-muted text-muted-foreground');
+    expect(pnlBg(0)).toBe('bg-[#1f2a3c] text-[#c3caac]');
   });
 });
 
@@ -91,6 +93,7 @@ describe('formatDate', () => {
 
   it('should return em dash for empty string', () => {
     expect(formatDate('')).toBe('—');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing edge case
     expect(formatDate(null as any)).toBe('—');
   });
 
