@@ -4,7 +4,7 @@ import {
   calculateFee,
   mapBybitToTrade,
   type BybitClosedPnlEntry,
-} from '../bybit';
+} from '../infrastructure/bybit/mapper';
 
 describe('Bybit Trade Mapping', () => {
   describe('directionFromSide', () => {
