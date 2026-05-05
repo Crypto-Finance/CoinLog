@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit } from '../rate-limit';
+import { checkRateLimit, formatRateLimitError } from '../rate-limit';
 import { verifyApiAuth } from '../api/auth';
 import { verifyOrigin } from '../../security/csrf-check';
+import { errorResponse } from '../api/errors';
 import { z } from 'zod';
-
-const MAX_BODY_SIZE = 10 * 1024; // 10KB
-const FRESHNESS_WINDOW_MS = 30_000; // 30 seconds
+import { VALIDATION, TIME } from '@/lib/constants';
 
 // ---------------------------------------------------------------------------
 // Zod Schema for request validation
@@ -32,17 +31,14 @@ type GuardResult = NextResponse | null;
 export async function guardRateLimit(request: NextRequest): Promise<GuardResult> {
   const limit = await checkRateLimit(request);
   if (!limit.success) {
-    return NextResponse.json(
-      { error: `Rate limited. Retry after ${Math.ceil((limit.reset - Date.now()) / 1000)}s` },
-      { status: 429 },
-    );
+    return errorResponse(429, formatRateLimitError(limit.reset));
   }
   return null;
 }
 
 export function guardOrigin(request: NextRequest): GuardResult {
   if (!verifyOrigin(request)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorResponse(403, 'Forbidden');
   }
   return null;
 }
@@ -50,24 +46,57 @@ export function guardOrigin(request: NextRequest): GuardResult {
 export function guardContentType(request: NextRequest): GuardResult {
   const contentType = request.headers.get('content-type');
   if (!contentType?.includes('application/json')) {
-    return NextResponse.json(
-      { error: 'Content-Type must be application/json' },
-      { status: 400 },
-    );
+    return errorResponse(400, 'Content-Type must be application/json');
   }
   return null;
 }
 
 /**
- * Check request body size limit.
+ * Check request body size limit via Content-Length header (early check).
  * @returns NextResponse with 413 error if body is too large, null otherwise
  */
-export function guardBodySize(request: NextRequest): GuardResult {
+export function guardContentLengthHeader(request: NextRequest): GuardResult {
   const contentLength = request.headers.get('content-length');
-  if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
-    return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+  if (contentLength && parseInt(contentLength) > VALIDATION.MAX_BODY_SIZE) {
+    return errorResponse(413, 'Request body too large');
   }
   return null;
+}
+
+/**
+ * Read and validate request body size.
+ * @returns Raw body text on success, or NextResponse with error
+ */
+async function readBody(request: NextRequest): Promise<string | NextResponse> {
+  const rawBody = await request.text();
+  
+  if (rawBody.length > VALIDATION.MAX_BODY_SIZE) {
+    return errorResponse(413, 'Request body too large');
+  }
+  
+  return rawBody;
+}
+
+/**
+ * Parse JSON and validate against Zod schema.
+ * @returns Parsed and validated body on success, or NextResponse with error
+ */
+function validateBody(rawBody: string): ImportRequestBody | NextResponse {
+  let body: unknown;
+  
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return errorResponse(400, 'Invalid JSON body');
+  }
+
+  const result = importRequestSchema.safeParse(body);
+  if (!result.success) {
+    console.error('Request validation failed:', result.error.flatten());
+    return errorResponse(400, 'Invalid request body');
+  }
+
+  return result.data;
 }
 
 /**
@@ -75,34 +104,17 @@ export function guardBodySize(request: NextRequest): GuardResult {
  * @returns Parsed and validated body on success, or NextResponse with error
  */
 export async function parseAndValidateBody(request: NextRequest): Promise<NextResponse | ImportRequestBody> {
-  const rawBody = await request.text();
-  if (rawBody.length > MAX_BODY_SIZE) {
-    return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
-  }
-
-  let body: unknown;
-  try {
-    body = JSON.parse(rawBody);
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const result = importRequestSchema.safeParse(body);
-  if (!result.success) {
-    // Log validation errors server-side for debugging
-    console.error('Request validation failed:', result.error.flatten());
-    // Return generic message to avoid leaking schema details
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-  }
-
-  return result.data;
+  const rawBodyResult = await readBody(request);
+  if (rawBodyResult instanceof NextResponse) return rawBodyResult;
+  
+  return validateBody(rawBodyResult);
 }
 
 export function guardFreshness(body: ImportRequestBody): GuardResult {
   const requestTime = typeof body.timestamp === 'number' ? body.timestamp : 0;
 
-  if (Math.abs(Date.now() - requestTime) > FRESHNESS_WINDOW_MS) {
-    return NextResponse.json({ error: 'Request expired' }, { status: 400 });
+  if (Math.abs(Date.now() - requestTime) > TIME.FRESHNESS_WINDOW_MS) {
+    return errorResponse(400, 'Request expired');
   }
   return null;
 }
@@ -110,14 +122,40 @@ export function guardFreshness(body: ImportRequestBody): GuardResult {
 export async function guardApiAuth(request: NextRequest): Promise<GuardResult> {
   const isValid = await verifyApiAuth(request);
   if (!isValid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!process.env.API_ROUTE_SECRET) {
+      console.error(
+        'API_ROUTE_SECRET is not configured. ' +
+        'External API access is disabled. Set API_ROUTE_SECRET in your environment variables.'
+      );
+      return errorResponse(500, 'Server configuration error. Please contact support.');
+    }
+    return errorResponse(401, 'Unauthorized');
   }
   return null;
 }
 
 /**
- * Run all import guards sequentially.
+ * Run all pre-flight guards for import request (excludes body validation).
  * @returns NextResponse if any guard fails, null if all pass
+ */
+export async function runPreFlightGuards(request: NextRequest): Promise<GuardResult> {
+  const guards = [guardRateLimit, guardOrigin, guardContentType, guardApiAuth] as const;
+  
+  for (const guard of guards) {
+    const result = await guard(request);
+    if (result) return result;
+  }
+
+  // Check body size via Content-Length header
+  const sizeError = guardContentLengthHeader(request);
+  if (sizeError) return sizeError;
+
+  return null;
+}
+
+/**
+ * Run all import guards including body validation.
+ * @returns NextResponse if any guard fails, validated body if all pass
  *
  * Security for Bybit import is provided by:
  * - Rate limiting (guardRateLimit)
@@ -128,15 +166,9 @@ export async function guardApiAuth(request: NextRequest): Promise<GuardResult> {
  * Keys are encrypted at rest in localStorage via AES-GCM with user passphrase.
  */
 export async function runImportGuards(request: NextRequest): Promise<GuardResult | ImportRequestBody> {
-  // Run guard checks in order
-  for (const guard of [guardRateLimit, guardOrigin, guardContentType, guardApiAuth]) {
-    const result = await guard(request);
-    if (result) return result;
-  }
-
-  // Check body size
-  const sizeError = guardBodySize(request);
-  if (sizeError) return sizeError;
+  // Run pre-flight guards (rate limit, origin, content-type, auth)
+  const preFlightError = await runPreFlightGuards(request);
+  if (preFlightError) return preFlightError;
 
   // Parse and validate body
   const bodyResult = await parseAndValidateBody(request);

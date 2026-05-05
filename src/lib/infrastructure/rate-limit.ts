@@ -1,5 +1,6 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { RATE_LIMIT } from '@/lib/constants';
 
 // Only initialize if env vars are present (fallback to no-op in dev)
 const ratelimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -8,22 +9,34 @@ const ratelimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDI
         url: process.env.UPSTASH_REDIS_REST_URL,
         token: process.env.UPSTASH_REDIS_REST_TOKEN,
       }),
-      limiter: Ratelimit.slidingWindow(10, '60 s'), // 10 requests per minute
+      limiter: Ratelimit.slidingWindow(RATE_LIMIT.MAX_REQUESTS, '60 s'), // 10 requests per minute
       prefix: '@upstash/ratelimit',
     })
   : null;
 
-export function getClientIp(request: Request): string {
+// Validate Upstash configuration in production
+if (process.env.NODE_ENV === 'production' && !ratelimit) {
+  console.error(
+    'CRITICAL: Rate limiter not configured for production. ' +
+    'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables. ' +
+    'In-memory rate limiting is ineffective in serverless environments.'
+  );
+}
+
+export function getClientIp(headers: Headers | Request): string {
+  // Accept both Headers and Request for flexibility
+  const headersObj = headers instanceof Request ? headers.headers : headers;
+  
   // Cloudflare (most reliable when behind CF)
-  const cfIp = request.headers.get('cf-connecting-ip');
+  const cfIp = headersObj.get('cf-connecting-ip');
   if (cfIp && isValidIp(cfIp)) return cfIp;
 
   // Vercel / trusted reverse proxy
-  const realIp = request.headers.get('x-real-ip');
+  const realIp = headersObj.get('x-real-ip');
   if (realIp && isValidIp(realIp)) return realIp;
 
   // Fallback: first IP in x-forwarded-for (client IP is leftmost)
-  const forwarded = request.headers.get('x-forwarded-for');
+  const forwarded = headersObj.get('x-forwarded-for');
   if (forwarded) {
     const ips = forwarded.split(',').map(ip => ip.trim());
     const firstIp = ips[0];
@@ -50,12 +63,15 @@ if (typeof global !== 'undefined') {
         memoryStore.delete(key);
       }
     }
-  }, 60_000);
+  }, RATE_LIMIT.CLEANUP_INTERVAL_MS);
 }
 
 // Warn in development if Upstash is not configured
 if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-  console.warn('Rate limit: Using in-memory store (not production-safe). Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for production.');
+  console.warn(
+    'Rate limit: Using in-memory store (development only). ' +
+    'Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for production.'
+  );
 }
 
 function memoryLimiter(identifier: string, maxRequests: number, windowMs: number) {
@@ -90,12 +106,12 @@ function memoryLimiter(identifier: string, maxRequests: number, windowMs: number
   };
 }
 
-export async function checkRateLimit(request: Request) {
-  const ip = getClientIp(request);
+export async function checkRateLimit(headers: Headers | Request) {
+  const ip = getClientIp(headers);
   const identifier = `bybit-import:${ip}`;
   
   if (!ratelimit) {
-    return memoryLimiter(identifier, 10, 60_000);
+    return memoryLimiter(identifier, RATE_LIMIT.MAX_REQUESTS, RATE_LIMIT.WINDOW_MS);
   }
 
   const result = await ratelimit.limit(identifier);
@@ -105,4 +121,14 @@ export async function checkRateLimit(request: Request) {
     remaining: result.remaining,
     reset: result.reset,
   };
+}
+
+/**
+ * Format rate limit error message with retry time.
+ * @param reset - Timestamp when rate limit resets (in ms)
+ * @returns Formatted error message
+ */
+export function formatRateLimitError(reset: number): string {
+  const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+  return `Rate limited. Retry after ${retryAfter}s`;
 }
