@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runImportGuards, type ImportRequestBody } from '@/lib/infrastructure/bybit/guards';
 import { fetchAllTrades } from '@/lib/infrastructure/bybit/api-client';
-import { sanitizeExternalError } from '@/lib/infrastructure/api/errors';
+import { errorResponse, sanitizeExternalError } from '@/lib/infrastructure/api/errors';
+import { calculateTimeWindow, validateTimeWindow } from '@/lib/validation/time-window';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // guardResult is ImportRequestBody | null, but null should not happen
   // since guards return NextResponse for all error cases
   if (!guardResult) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    return errorResponse(400, 'Invalid request');
   }
 
   return handleImport(guardResult);
@@ -29,24 +30,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 async function handleImport(body: ImportRequestBody): Promise<NextResponse> {
   const { apiKey, apiSecret, symbol, startTime, endTime, latestOpenTime } = body;
 
-  // Determine time range
-  const now = Date.now();
-  let start = startTime;
-  if (start === undefined) {
-    if (latestOpenTime) {
-      start = new Date(latestOpenTime).getTime();
-    } else {
-      // Default: last 90 days
-      start = now - 90 * 24 * 60 * 60 * 1000;
-    }
-  }
-  const end = endTime ?? now;
-
-  if (start >= end) {
-    return NextResponse.json(
-      { error: 'startTime must be before endTime' },
-      { status: 400 },
-    );
+  // Calculate and validate time window
+  const { start, end } = calculateTimeWindow({ startTime, endTime, latestOpenTime });
+  
+  try {
+    validateTimeWindow(start, end);
+  } catch (error) {
+    return errorResponse(400, (error as Error).message);
   }
 
   try {
@@ -65,9 +55,6 @@ async function handleImport(body: ImportRequestBody): Promise<NextResponse> {
   } catch (err) {
     // Sanitize external errors before exposing to client
     const message = sanitizeExternalError(err);
-    return NextResponse.json(
-      { error: message },
-      { status: 502 },
-    );
+    return errorResponse(502, message);
   }
 }
