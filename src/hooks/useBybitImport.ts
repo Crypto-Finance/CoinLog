@@ -8,6 +8,7 @@ import * as db from '@/lib/infrastructure/db';
 import { showImportSuccess } from '@/lib/import-page/import-toast';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/utils/errors';
+import { TIME } from '@/lib/constants';
 
 interface UseBybitImportOptions {
   hasKeys: boolean;
@@ -60,7 +61,7 @@ async function performImport(passphrase: string, symbol: string, daysNum: number
   }
 
   const endTime = Date.now();
-  const startTime = endTime - daysNum * 24 * 60 * 60 * 1000;
+  const startTime = endTime - daysNum * TIME.ONE_DAY_MS;
 
   const { trades, totalFetched } = await importBybitTrades({
     apiKey: keys.apiKey,

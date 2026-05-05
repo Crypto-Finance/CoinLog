@@ -3,6 +3,14 @@ import { timingSafeEqual } from 'crypto';
 
 const API_SECRET = process.env.API_ROUTE_SECRET;
 
+// Warn at startup if API_ROUTE_SECRET is not configured
+if (!API_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn(
+    'WARNING: API_ROUTE_SECRET is not set. External API access to /api/* routes will be disabled. ' +
+    'Set API_ROUTE_SECRET environment variable to enable secure API access.'
+  );
+}
+
 /**
  * Verify bearer token authentication for API routes.
  * Uses constant-time comparison to prevent timing attacks.

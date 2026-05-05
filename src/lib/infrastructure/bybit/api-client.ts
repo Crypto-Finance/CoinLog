@@ -1,15 +1,126 @@
 import { createHmac } from 'crypto';
 import { mapBybitToTrade, type BybitClosedPnlEntry } from './mapper';
+import { BYBIT } from '@/lib/constants';
 
-const BYBIT_API_URL = process.env.BYBIT_API_URL || 'https://api.bybit.com';
-const MAX_DAY_WINDOW = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-const LIMIT = 50;
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Sleep for a specified duration.
+ */
+export async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ---------------------------------------------------------------------------
+// Type Definitions
+// ---------------------------------------------------------------------------
 
 interface SignedGetResult {
   data: Record<string, unknown> | null;
   nextCursor: string | null;
   headers: Headers;
 }
+
+interface BybitApiResponse<T = unknown> {
+  retCode: number;
+  retMsg: string;
+  result: T | null;
+}
+
+// ---------------------------------------------------------------------------
+// Request Building & Signing
+// ---------------------------------------------------------------------------
+
+/**
+ * Build signed request headers for Bybit API.
+ */
+function buildSignedRequest(apiKey: string, apiSecret: string, path: string): {
+  url: string;
+  headers: Record<string, string>;
+} {
+  const timestamp = Date.now().toString();
+  const recvWindow = BYBIT.RECV_WINDOW;
+
+  const [urlPath, queryString] = path.split('?');
+  const paramStr = queryString ?? '';
+  const signStr = timestamp + apiKey + recvWindow + paramStr;
+  const signature = createHmac('sha256', apiSecret).update(signStr).digest('hex');
+
+  const url = queryString
+    ? `${BYBIT.API_URL}${urlPath}?${queryString}`
+    : `${BYBIT.API_URL}${urlPath}`;
+
+  return {
+    url,
+    headers: {
+      'X-BAPI-API-KEY': apiKey,
+      'X-BAPI-SIGN': signature,
+      'X-BAPI-SIGN-TYPE': '2',
+      'X-BAPI-TIMESTAMP': timestamp,
+      'X-BAPI-RECV-WINDOW': recvWindow,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// HTTP Execution
+// ---------------------------------------------------------------------------
+
+/**
+ * Execute fetch request with timeout handling.
+ */
+async function executeRequest(url: string, headers: Record<string, string>): Promise<Response> {
+  const res = await fetch(url, {
+    method: 'GET',
+    headers,
+    signal: AbortSignal.timeout(BYBIT.REQUEST_TIMEOUT),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Bybit HTTP ${res.status}: ${text || res.statusText}`);
+  }
+
+  return res;
+}
+
+// ---------------------------------------------------------------------------
+// Response Parsing
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse and validate Bybit API response.
+ */
+async function parseBybitResponse<T>(res: Response): Promise<{ data: T | null; nextCursor: string | null }> {
+  const json = await res.json();
+
+  if (typeof json !== 'object' || json === null) {
+    throw new Error('Invalid response');
+  }
+
+  const response = json as BybitApiResponse<T>;
+
+  if (response.retCode !== 0) {
+    throw new Error(
+      `Bybit API error: ${response.retMsg || 'Unknown'} (code: ${response.retCode})`,
+    );
+  }
+
+  const result = response.result;
+  const nextCursor =
+    (result as Record<string, unknown> | undefined)?.nextPageCursor as string | undefined;
+
+  return {
+    data: result ?? null,
+    nextCursor: nextCursor ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main Entry Point
+// ---------------------------------------------------------------------------
 
 /**
  * Make a signed GET request to Bybit API using HMAC-SHA256.
@@ -19,70 +130,11 @@ async function signedGet(
   apiSecret: string,
   path: string,
 ): Promise<SignedGetResult> {
-  const timestamp = Date.now().toString();
-  const recvWindow = '5000';
+  const { url, headers } = buildSignedRequest(apiKey, apiSecret, path);
+  const res = await executeRequest(url, headers);
+  const { data, nextCursor } = await parseBybitResponse<Record<string, unknown>>(res);
 
-  // Extract query string for signing
-  const [urlPath, queryString] = path.split('?');
-  const paramStr = queryString ?? '';
-  const signStr = timestamp + apiKey + recvWindow + paramStr;
-
-  const signature = createHmac('sha256', apiSecret).update(signStr).digest('hex');
-
-  const url = queryString ? `${BYBIT_API_URL}${urlPath}?${queryString}` : `${BYBIT_API_URL}${urlPath}`;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'X-BAPI-API-KEY': apiKey,
-        'X-BAPI-SIGN': signature,
-        'X-BAPI-SIGN-TYPE': '2',
-        'X-BAPI-TIMESTAMP': timestamp,
-        'X-BAPI-RECV-WINDOW': recvWindow,
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(
-        `Bybit HTTP ${res.status}: ${text || res.statusText}`,
-      );
-    }
-
-    const json = await res.json() as unknown;
-
-    // Narrow unknown type safely
-    if (typeof json !== 'object' || json === null) {
-      throw new Error('Invalid response');
-    }
-
-    const retCode = (json as Record<string, unknown>).retCode;
-    const retMsg = (json as Record<string, unknown>).retMsg;
-
-    if (retCode !== 0) {
-      throw new Error(
-        `Bybit API error: ${typeof retMsg === 'string' ? retMsg : 'Unknown'} (code: ${retCode})`,
-      );
-    }
-
-    const result = (json as Record<string, unknown>).result;
-    return {
-      data: (result as Record<string, unknown> | null) ?? null,
-      nextCursor:
-        ((result as Record<string, unknown> | undefined)?.nextPageCursor as string | undefined) ?? null,
-      headers: res.headers,
-    };
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
+  return { data, nextCursor, headers: res.headers };
 }
 
 /**
@@ -101,7 +153,7 @@ export async function fetchWindow(
   while (true) {
     const params = new URLSearchParams({
       category: 'linear',
-      limit: String(LIMIT),
+      limit: String(BYBIT.LIMIT),
       startTime: String(startTime),
       endTime: String(endTime),
     });
@@ -127,9 +179,9 @@ export async function fetchWindow(
     if (remaining !== null && parseInt(remaining) < 5) {
       const resetTs = headers.get('X-Bapi-Limit-Reset-Timestamp');
       const waitMs = resetTs ? parseInt(resetTs) - Date.now() + 100 : 200;
-      if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs));
+      if (waitMs > 0) await sleep(waitMs);
     } else {
-      await new Promise(r => setTimeout(r, 200));
+      await sleep(200);
     }
     
     cursor = nextCursor;
@@ -153,7 +205,7 @@ export async function fetchAllTrades(
 
   // Chunk into 7-day windows (newest first)
   for (let windowEnd = endTime; windowEnd > startTime; ) {
-    const windowStart = Math.max(windowEnd - MAX_DAY_WINDOW, startTime);
+    const windowStart = Math.max(windowEnd - BYBIT.MAX_DAY_WINDOW, startTime);
 
     const windowTrades = await fetchWindow(
       apiKey,

@@ -2,6 +2,9 @@
 // Import function
 // ---------------------------------------------------------------------------
 
+import type { ImportResult } from './import-action';
+import { importBybitTradesAction } from './import-action';
+
 interface ImportParams {
   apiKey: string;
   apiSecret: string;
@@ -12,30 +15,10 @@ interface ImportParams {
   timestamp?: number;
 }
 
-interface ImportResult {
-  trades: import('../../domain/types').Trade[];
-  totalFetched: number;
-}
-
 export async function importBybitTrades(
   params: ImportParams,
 ): Promise<ImportResult> {
-  const res = await fetch('/api/bybit/import', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...params, timestamp: Date.now() }),
-  });
-
-  if (!res.ok) {
-    let errorMessage = 'Import failed';
-    try {
-      const error = (await res.json()) as { error?: string };
-      if (error.error) errorMessage = error.error;
-    } catch {
-      // ignore — use default message
-    }
-    throw new Error(errorMessage);
-  }
-
-  return res.json() as Promise<ImportResult>;
+  // Direct Server Action call - no HTTP, no auth header needed
+  // Respect caller-provided timestamp if present, otherwise use current time
+  return importBybitTradesAction({ ...params, timestamp: params.timestamp ?? Date.now() });
 }

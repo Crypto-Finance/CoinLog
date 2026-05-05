@@ -1,3 +1,12 @@
+import { NextResponse } from 'next/server';
+
+/**
+ * Create a standardized JSON error response.
+ */
+export function errorResponse(status: number, message: string): NextResponse {
+  return NextResponse.json({ error: message }, { status });
+}
+
 /**
  * Sanitize external API errors before exposing them to clients.
  * Prevents leaking sensitive information from external services.
